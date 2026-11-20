@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:">
+<title>BotW/TotK AP Manual Sync</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header><h1><img class="apicon" src="icon.png" alt="">BotW/TotK AP Manual Sync</h1>
+  <button id="pauseBtn" class="ghost">Pause Syncing</button></header>
+
+<section class="card"><h2>Archipelago Room</h2>
+  <div class="grid3">
+    <label>Server<input id="server" placeholder="archipelago.gg"></label>
+    <label>Port<input id="port" type="number" min="1" max="65535"></label>
+    <label><span>Password <span class="muted">(optional)</span></span><input id="password" type="password" autocomplete="off"></label>
+  </div>
+</section>
+
+<div id="games"></div>
+
+<section class="card"><h2>App</h2>
+  <label class="chk"><input type="checkbox" id="minimizeToTray"> Minimize to tray</label>
+  <label class="chk"><input type="checkbox" id="closeToTray"> Close button hides to tray (keeps running)</label>
+  <label class="chk"><input type="checkbox" id="startMinimized"> Start minimized to tray</label>
+  <label class="chk"><input type="checkbox" id="launchAtLogin"> Launch at login <span class="muted">(Windows)</span></label>
+</section>
+
+<div class="actions"><button id="saveBtn" class="primary">Apply Settings &amp; Reconnect</button><span id="saved" class="muted"></span></div>
+
+<section class="card"><h2>Log <button id="clearLog" class="ghost small">Clear</button></h2><div id="log"></div></section>
+<script src="renderer.js"></script></body></html>

@@ -1,0 +1,54 @@
+SWORDS,,,,,TWO-HANDED WEAPONS,,,,,SPEARS,,,
+Weapon,Damage,Durability,Total Use,,Weapon,Damage,Durability,Total Use,,Weapon,Damage,Durability,Total Use
+Master Sword (Awakened),60,188,11280,,Boulder Breaker,60,60,3600,,Lightscale Trident,22,70,1540
+Savage Lynel Sword,58,41,2378,,Biggoron's Sword,50,60,3000,,Ancient Spear,30,50,1500
+Ancient Short Sword,40,54,2160,,Ancient Bladesaw,55,50,2750,,Savage Lynel Spear,30,45,1350
+Scimitar of the Seven,32,60,1920,,Savage Lynel Crusher,78,35,2730,,Royal Halberd,26,50,1300
+Royal Broadsword,36,36,1296,,Sword of the Six Sages,48,50,2400,,Flamespear,24,50,1200
+Guardian Sword++,40,32,1280,,Fierce Deity Sword,60,35,2100,,Thunderspear,22,50,1100
+Goddess Sword,28,45,1260,,Royal Claymore,52,40,2080,,Frostspear,20,40,800
+Master Sword (Unawakened),30,40,1200,,Edge of Duality,50,35,1750,,Drillshaft,14,50,700
+Mighty Lynel Sword,36,32,1152,,Great Flameblade,34,50,1700,,Guardian Spear++,20,35,700
+Demon Carver,40,25,1000,,Stone Smasher,42,40,1680,,Mighty Lynel Spear,20,35,700
+Lizal Tri-Boomerang,36,27,972,,Great Thunderblade,32,50,1600,,Ceremonial Trident,14,40,560
+Flameblade,24,36,864,,Ancient Battle Axe++,60,25,1500,,Gerudo Spear,16,35,560
+Moonlight Scimitar,25,32,800,,Mighty Lynel Crusher,54,25,1350,,Knight's Halberd,13,40,520
+Thunderblade,22,36,792,,Cobble Crusher,30,40,1200,,Forked Lizal Spear,18,28,504
+Guardian Sword+,30,26,780,,Knight's Claymore,38,30,1140,,Silverscale Spear,12,40,480
+Knight's Broadsword,26,27,702,,Royal Guard's Claymore,72,15,1080,,Royal Guard's Spear,32,15,480
+Royal Guard's Sword,48,14,672,,Dragonbone Moblin Club,45,24,1080,,Serpentine Spear,12,35,420
+Lynel Sword,24,26,624,,Giant Boomerang,25,40,1000,,Forest Dweller's Spear,11,35,385
+Frostblade,20,30,600,,Windcleaver,40,25,1000,,Dragonbone Moblin Spear,15,25,375
+Lizal Forked Boomerang,24,25,600,,Double Axe,18,52,936,,Guardian Spear+,15,25,375
+Forest Dweller's Sword,22,27,594,,Ancient Battle Axe+,45,20,900,,Zora Spear,9,40,360
+Sword,22,27,594,,Golden Claymore,28,30,840,,Feathered Spear,10,35,350
+Dragonbone Boko Club,24,18,432,,Eightfold Longblade,32,25,800,,Lynel Spear,14,25,350
+Zora Sword,15,27,405,,Lynel Crusher,36,20,720,,Enhanced Lizal Spear,12,22,264
+Feathered Edge,15,27,405,,Silver Longsword,22,30,660,,Soldier's Spear,7,35,245
+Sea-Breeze Boomerang,20,20,400,,Dragonbone Boko Bat,36,16,576,,Dragonbone Boko Spear,12,20,240
+Eightfold Blade,15,26,390,,Soldier's Claymore,20,25,500,,Guardian Spear,10,20,200
+Gerudo Scimitar,16,23,368,,Spiked Moblin Club,27,18,486,,Spiked Moblin Spear,9,20,180
+Soldier's Broadsword,14,25,350,,Iron Sledgehammer,12,40,480,,Lizal Spear,7,18,126
+Guardian Sword,20,17,340,,Cobble Crusher,15,30,450,,Throwing Spear,6,20,120
+Meteor Rod,10,32,320,,Ancient Battle Axe,30,15,450,,Fishing Harpoon,8,12,96
+Blizzard Rod,10,32,320,,Spiked Boko Bat,18,12,216,,Traveler's Spear,3,30,90
+Thunderstorm Rod,10,32,320,,Traveler's Claymore,10,20,200,,Spiked Boko Spear,6,15,90
+Lizal Boomerang,14,17,238,,Woodcutter's Axe,3,47,141,,Farmer's Pitchfork,7,12,84
+Vicious Sickle,16,14,224,,Rusty Claymore,12,10,120,,Rusty Halberd,5,15,75
+Spiked Boko Club,12,14,168,,Boat Oar,14,8,112,,Moblin Spear,4,15,60
+Boomerang,8,18,144,,Moblin Club,9,12,108,,Wooden Mop,5,8,40
+Traveler's Sword,5,20,100,,Farming Hoe,16,6,96,,Boko Spear,2,12,24
+Lizalfos Arm,12,8,96,,Moblin Arm,15,5,75,,Average,13.73684211,30.71052632,487.9736842
+Spring-Loaded Hammer,1,80,80,,Boko Bat,6,12,72,,Standard Deviation,7.852299407,14.25995697,427.8281094
+Fire Rod,5,14,70,,Korok Leaf,1,25,25,,Median,12,32.5,375
+Ice Rod,5,14,70,,Average,32.92682927,29.43902439,1065.926829,,,,,
+Lightning Rod,5,14,70,,Standard Deviation,19.19526141,14.87188997,896.7728426,,,,,
+Rusty Broadsword,6,8,48,,Median,32,25,900,,,,,
+Boko Club,4,8,32,,,,,,,,,,
+Bokoblin Arm,5,5,25,,,,,,,,,,
+Soup Ladle,4,5,20,,,,,,,,,,
+Torch,2,8,16,,,,,,,,,,
+Tree Branch,2,4,8,,,,,,,,,,
+Average,20.37,28.90,795.49,,,,,,,,,,
+Standard Deviation,14.23,27.07,1609.57,,,,,,,,,,
+Median,20,26,405,,,,,,,,,,

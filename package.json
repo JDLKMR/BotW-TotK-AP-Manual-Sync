@@ -1,0 +1,60 @@
+{
+  "name": "botw-totk-ap-manual-sync",
+  "productName": "BotW-TotK AP Manual Sync",
+  "version": "0.1.0",
+  "description": "Background app that applies Archipelago received items (Manual BotW / TotK APWorlds) to your save via Marc Robledo's save editors.",
+  "main": "src/main/main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node tools/test-e2e.js && node tools/test-flow.js && node tools/test-flow2.js && node tools/test-prune.js && node tools/test-prune2.js && node tools/test-champions.js && node tools/test-vows.js && node tools/test-updater.js && node tools/test-reset.js",
+    "durabilities": "node tools/build-durabilities.js",
+    "dist:win": "electron-builder --win portable",
+    "dist:linux": "electron-builder --linux AppImage"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "jsdom": "^25.0.0",
+    "resedit": "^3.1.1"
+  },
+  "build": {
+    "appId": "dev.jd.botwtotkapmanualsync",
+    "files": [
+      "src/**",
+      "vendor/**",
+      "apworlds/**",
+      "assets/**",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "icon": "assets/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Utility"
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "artifactName": "BotW-TotK-AP-Manual-Sync-${version}-${os}.${ext}",
+    "asar": true,
+    "afterPack": "build/afterPack.js"
+  },
+  "author": "JD",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JDLKMR/BotW-TotK-AP-Manual-Sync.git"
+  },
+  "homepage": "https://github.com/JDLKMR/BotW-TotK-AP-Manual-Sync"
+}

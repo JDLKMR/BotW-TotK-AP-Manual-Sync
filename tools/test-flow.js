@@ -1,0 +1,61 @@
+const fs = require('fs'), os = require('os'), path = require('path');
+const { WebSocketServer } = require('ws');
+const { SyncManager } = require('../src/main/syncEngine');
+const { JsonStore, DEFAULT_SETTINGS } = require('../src/main/store');
+const { APWORLDS } = require('../src/main/rules');
+const { runDriver, verifyDriver } = require('./jsdomHost');
+const ROOT = process.env.APWORLD_REPOS || '/home/claude/src';
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'apsync-'));
+const saveDir = path.join(tmp, 'save', '1'); fs.mkdirSync(saveDir, { recursive: true });
+const SAVE = path.join(saveDir, 'game_data.sav');
+const orig = fs.readFileSync(ROOT + '/BotW-APManual-main/botw-save-switch/game_data.sav');
+fs.writeFileSync(SAVE, orig);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let items = JSON.parse(fs.readFileSync(path.join(ROOT, APWORLDS.botw.dir, 'data/items.json'), 'utf8')); items = Array.isArray(items) ? items : items.data;
+const name2id = {}; items.forEach((i, n) => name2id[i.name] = 1000 + n);
+const wss = new WebSocketServer({ port: 38999 }); let sock; let received = [];
+wss.on('connection', ws => {
+  sock = ws;
+  ws.send(JSON.stringify([{ cmd: 'RoomInfo', seed_name: 'TESTSEED', datapackage_checksums: { [APWORLDS.botw.game]: 'abc' }, version: { major: 0, minor: 6, build: 1 } }]));
+  ws.on('message', d => JSON.parse(d.toString()).forEach(p => {
+    if (p.cmd === 'GetDataPackage') ws.send(JSON.stringify([{ cmd: 'DataPackage', data: { games: { [APWORLDS.botw.game]: { item_name_to_id: name2id } } } }]));
+    if (p.cmd === 'Connect') { console.log('  server got Connect: game=%s slot=%s items_handling=%d', p.game, p.name, p.items_handling);
+      ws.send(JSON.stringify([{ cmd: 'Connected', slot: 1, players: [{ slot: 1, name: 'Link' }, { slot: 2, name: 'Zelda' }], checked_locations: [] }])); }
+  }));
+});
+const give = (names, index) => sock.send(JSON.stringify([{ cmd: 'ReceivedItems', index, items: names.map(n => ({ item: name2id[n], location: 5, player: 2, flags: 1 })) }]));
+(async () => {
+  const settings = new JsonStore(path.join(tmp, 'settings.json'), DEFAULT_SETTINGS);
+  Object.assign(settings.data, { server: '127.0.0.1', port: 38999, pollMs: 500 });
+  settings.data.games.botw = { enabled: true, slot: 'Link', saveDir };
+  const ledger = new JsonStore(path.join(tmp, 'ledger.json'), { botw: {}, totk: {} });
+  const mgr = new SyncManager({ settings, ledgerStore: ledger, dirs: { vendorDir: path.join(__dirname, '..', 'vendor/savegame-editors'), apworldsRoot: ROOT, backupRoot: path.join(tmp, 'backups'), dataDir: path.join(tmp, 'data') },
+    host: { run: runDriver, verify: verifyDriver } });
+  mgr.on('log', e => console.log(`  [${e.level}] ${e.msg}`));
+  mgr.start(); await sleep(1500);
+  const first = ['Hateno Tower', 'Magnesis', 'Heart Container', 'Heart Container', 'Heart Container', 'Heart Container', 'Stamina Vessel', "Soldier's Helm", 'Arrows (50)', '100 Rupees', 'Weapon Slot', 'Progressive Armor Upgrade'];
+  console.log('\n== 1. items arrive (game closed, no save yet)'); give(first, 0); await sleep(800);
+  console.log('status:', JSON.stringify({ awaiting: mgr.games.botw.status().awaitingSave, pending: mgr.games.botw.status().pendingItems }));
+  console.log('file untouched until player saves:', Buffer.compare(fs.readFileSync(SAVE), orig) === 0);
+  console.log('\n== 2. player saves in-game (file changes)'); const gameSave = Buffer.from(orig); fs.writeFileSync(SAVE, gameSave); fs.utimesSync(SAVE, new Date(), new Date(Date.now() + 5000));
+  await sleep(14000);
+  const out1 = fs.readFileSync(SAVE); console.log('file overwritten with edits:', Buffer.compare(out1, orig) !== 0, 'backups:', fs.readdirSync(path.join(tmp, 'backups/botw')).length);
+  const chk = await verifyDriver('botw', out1, [{ t: "hearts", min: 4 }, { t: "vessels", min: 1 }]); console.log('hearts>=4 & vessels>=1 in written file:', chk);
+  console.log('\n== 3. player saves AGAIN without reloading (game state lacks our edits)');
+  fs.writeFileSync(SAVE, orig); fs.utimesSync(SAVE, new Date(), new Date(Date.now() + 10000)); await sleep(14000);
+  const out2 = fs.readFileSync(SAVE); console.log('re-applied:', (await verifyDriver('botw', out2, [{ t: "hearts", min: 4 }])).every(Boolean));
+  console.log('\n== 4. player reloads, plays, saves (descendant of our write) + 1 new item');
+  give(['Arrows (50)'], first.length); await sleep(500);
+  fs.writeFileSync(SAVE, out2); fs.utimesSync(SAVE, new Date(), new Date(Date.now() + 20000)); await sleep(14000);
+  console.log('ledger confirmed arrows:', ledger.data.botw.confirmed['Arrows (50)'], ' pending:', !!ledger.data.botw.pending);
+  console.log('\n== 5. Ballad toggle (Rito off) -> applied on the next save');
+  const crc = (str) => { let t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0 } let c = 0xFFFFFFFF; for (const ch of Buffer.from(str)) c = t[(c ^ ch) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0 };
+  const ballad = async (b) => (await verifyDriver('botw', b, ['Rito', 'Goron', 'Zora', 'Gerudo'].map(r => ({ t: 'flag', name: r, hash: crc('BalladOfHero' + r + '_Activated') })))); 
+  const cur = fs.readFileSync(SAVE); console.log('  flags on in current save (rito,goron,zora,gerudo):', await ballad(cur));
+  console.log('  status before toggle: awaiting =', mgr.games.botw.status().awaitingSave);
+  settings.data.games.botw.ballad = Object.assign({ rito: true, goron: true, zora: true, gerudo: true }, { rito: false }); mgr.start(); await sleep(2500);
+  console.log('  status after toggle:  awaiting =', mgr.games.botw.status().awaitingSave, '(want true)');
+  fs.writeFileSync(SAVE, cur); fs.utimesSync(SAVE, new Date(), new Date(Date.now() + 30000)); await sleep(14000);
+  console.log('  flags after next save:', await ballad(fs.readFileSync(SAVE)), '(want false,true,true,true)', ' awaiting =', mgr.games.botw.status().awaitingSave, '(want false)');
+  mgr.stop(); wss.close(); process.exit(0);
+})().catch(e => { console.error('FLOW TEST FAILED', e); process.exit(2); });
