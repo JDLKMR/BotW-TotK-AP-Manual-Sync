@@ -177,7 +177,7 @@
       if (cur === null) { report.warnings.push('Flag not found in save: ' + f.name); return; }
       const want = f.value >>> 0;
       const need = f.mode === 'atLeast' ? cur < want : cur !== want;
-      if (need) { writeFlag(f, want); note('flag ' + f.name + ': ' + cur + ' -> ' + want); }
+      if (need) { writeFlag(f, want); if (!f.silent) note('flag ' + f.name + ': ' + cur + ' -> ' + want); }
       if (f.slotCat) caps[f.slotCat] = Math.max(cur, want);
     });
 
@@ -255,6 +255,14 @@
         if (target > ch.tier) { SE().editItem2(x.i, ch.chain[target]); n++; }
       });
       if (n) note('upgraded ' + n + ' armor piece(s) to level ' + plan.armorLevel);
+    }
+
+    /* "Teleport to Tower": point the saved position at the tower (overworld map cell derived from the coordinates), written by the editor's own save() below */
+    if (plan.teleport) {
+      const t = plan.teleport, col = Math.min(9, Math.max(0, Math.floor((t.x + 5000) / 1000))), row = Math.min(7, Math.max(0, Math.floor((t.z + 4000) / 1000)));
+      g.setValue('pos-x', t.x); g.setValue('pos-y', t.y); g.setValue('pos-z', t.z);
+      g.setValue('pos-maptype', 'MainField'); g.setValue('pos-map', String.fromCharCode(65 + col) + '-' + (row + 1));
+      report.teleported = true; note('teleport to ' + t.tower + ' (' + t.x + ', ' + t.y + ', ' + t.z + ')');
     }
 
     SE().save();

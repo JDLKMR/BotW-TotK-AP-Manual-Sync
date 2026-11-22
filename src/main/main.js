@@ -4,6 +4,8 @@ const { JsonStore, DEFAULT_SETTINGS } = require('./store');
 const { EditorHost } = require('./editorHost');
 const { SyncManager } = require('./syncEngine');
 const updater = require('./updater');
+const cli = require('./cli');
+const towers = require('./towers');
 
 const ROOT = path.join(__dirname, '..', '..');
 if (!app.requestSingleInstanceLock()) { app.quit(); return; }
@@ -12,11 +14,21 @@ let win, tray, mgr, settings, ledger, quitting = false, paused = false, updating
 const logBuf = [];
 const dirs = {
   vendorDir: path.join(ROOT, 'vendor', 'savegame-editors'), apworldsRoot: path.join(ROOT, 'apworlds'),
-  driversDir: path.join(ROOT, 'src', 'drivers'), backupRoot: null, dataDir: null
+  driversDir: path.join(ROOT, 'src', 'drivers'), backupRoot: null, dataDir: null, towerDirs: []
 };
 const APP_TITLE = 'BotW/TotK AP Manual Sync';
 const icon = () => nativeImage.createFromPath(path.join(ROOT, 'assets', 'icon.png')); // square, as window/tray/installer icons must be
 const send = (ch, payload) => { if (win && !win.isDestroyed()) win.webContents.send(ch, payload); };
+const pushLog = (level, msg) => { const e = { level, msg, t: Date.now() }; logBuf.push(e); if (logBuf.length > 600) logBuf.shift(); send('log', e); };
+
+/* Optional launch arguments (--server, --botw-slot, --totk-slot, --password, --enable-botw, --enable-totk): saved into the settings, so the window shows them */
+function applyCli(argv) {
+  const r = cli.parseArgs(argv);
+  r.errors.forEach(e => pushLog('warn', 'Command line: ' + e));
+  const notes = cli.applyToSettings(settings.data, r.values);
+  if (notes.length) { settings.save(); pushLog('info', 'Command line: ' + notes.join(', ')); }
+  return notes.length > 0;
+}
 
 function createWindow(show) {
   win = new BrowserWindow({ width: 980, height: 820, minWidth: 760, minHeight: 600, show, title: APP_TITLE, icon: icon(), backgroundColor: '#14161a',
@@ -95,11 +107,14 @@ app.whenReady().then(() => {
     }
   } catch (_) { /* start fresh */ }
   dirs.backupRoot = path.join(ud, 'backups'); dirs.dataDir = path.join(ud, 'datapackages');
+  dirs.towerDirs = [path.join(ud, 'towers'), path.join(ROOT, 'src', 'main', 'towers')]; // tower coordinate .txt files (user data wins)
   settings = new JsonStore(path.join(ud, 'settings.json'), DEFAULT_SETTINGS);
+  applyCli(process.argv); // before anything connects, so the launch arguments are in effect from the start
   ledger = new JsonStore(path.join(ud, 'ledger.json'), { botw: {}, totk: {} });
   const host = new EditorHost(dirs);
   mgr = new SyncManager({ settings, ledgerStore: ledger, host: { run: (g, b, p) => host.run(g, b, p), verify: (g, b, c) => host.verify(g, b, c) }, dirs });
   mgr.on('log', (e) => { logBuf.push(e); if (logBuf.length > 600) logBuf.shift(); send('log', e); });
+  mgr.on('cfg', () => send('opts:changed', settings.data.games)); // e.g. a tower teleport request was used up
   mgr.on('status', (s) => send('status', s));
 
   const hidden = process.argv.includes('--hidden') || settings.data.startMinimized;
@@ -118,6 +133,14 @@ app.whenReady().then(() => {
   ipcMain.handle('settings:save', (_e, data) => {
     const g = data.games; Object.assign(settings.data, data); settings.data.games = g; settings.save(); applyLoginItem(); mgr.start(); return true;
   });
+  /* Champions' Ballad / tower options take effect on the next in-game save without pressing Apply Settings */
+  ipcMain.handle('game-opts:save', (_e, o) => {
+    o = o || {}; const gs = settings.data.games;
+    if (o.botw && o.botw.ballad) for (const k of ['rito', 'goron', 'zora', 'gerudo']) gs.botw.ballad[k] = o.botw.ballad[k] !== false;
+    for (const k of ['botw', 'totk']) if (o[k] && o[k].towers) gs[k].towers = { unlockWarps: o[k].towers.unlockWarps !== false, teleportTo: String(o[k].towers.teleportTo || '') };
+    settings.save(); mgr.refresh(); return true;
+  });
+  ipcMain.handle('towers:get', () => towers.describe(dirs.towerDirs));
   ipcMain.handle('status:get', () => mgr.statuses());
   ipcMain.handle('log:get', () => logBuf);
   ipcMain.handle('paused:get', () => paused);
@@ -126,6 +149,9 @@ app.whenReady().then(() => {
   ipcMain.handle('open-backups', () => { fs.mkdirSync(dirs.backupRoot, { recursive: true }); return shell.openPath(dirs.backupRoot); });
   ipcMain.handle('pause', (_e, p) => { paused = !!p; mgr.setPaused(paused); send('paused', paused); return paused; });
 });
-app.on('second-instance', showWindow);
+app.on('second-instance', (_e, argv) => { // launched again with arguments: apply them to the running app
+  if (settings && mgr && applyCli(argv)) { mgr.start(); send('settings:changed', settings.data); }
+  showWindow();
+});
 app.on('before-quit', () => { quitting = true; if (mgr) mgr.stop(); });
 app.on('window-all-closed', () => { /* stay alive in the tray */ });

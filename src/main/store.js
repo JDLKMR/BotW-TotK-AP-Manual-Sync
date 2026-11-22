@@ -9,6 +9,9 @@ function deepMerge(a, b) { for (const k of Object.keys(b || {})) { if (b[k] && t
 const DEFAULT_SETTINGS = {
   server: 'archipelago.gg', port: 38281, password: '',
   minimizeToTray: true, closeToTray: true, startMinimized: false, launchAtLogin: false, pollMs: 1500, keepBackups: 15, ignoreStartItems: true, removeUnreceivedArmor: true,
-  games: { botw: { enabled: false, slot: '', saveDir: '', ballad: { rito: true, goron: true, zora: true, gerudo: true } }, totk: { enabled: false, slot: '', saveDir: '' } }
+  games: {
+    botw: { enabled: false, slot: '', saveDir: '', ballad: { rito: true, goron: true, zora: true, gerudo: true }, towers: { unlockWarps: true, teleportTo: '' } },
+    totk: { enabled: false, slot: '', saveDir: '', towers: { unlockWarps: true, teleportTo: '' } }
+  }
 };
 module.exports = { JsonStore, DEFAULT_SETTINGS };

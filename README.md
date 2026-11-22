@@ -10,11 +10,22 @@ A companion program for my Breath of the Wild and Tears of the Kingdom Archipela
 
 The settings, ledger, and backups can be found in your user data folder (Windows: `%APPDATA%\BotW-TotK AP Manual Sync`, Linux: `~/.config/BotW-TotK AP Manual Sync`).
 
-## Run From Source
+## Launch Arguments
+```
+--server <server>:<port>        Archipelago server and port
+--botw-slot <slot>              BotW slot name
+--totk-slot <slot>              TotK slot name
+--password <password>           Room password
+--enable-botw <true/false>      Turn BotW syncing on/off
+--enable-totk <true/false>      Turn TotK syncing on/off
+```
+`--flag=value` also works.
+
+## Run/Build from Source
 ```
 npm install
 npm start
-npm run dist:win         # portable .exe + installer
+npm run dist:win         # Windows executable
 npm run dist:linux       # Linux AppImage
 npm test                 # needs both APWorld repos: APWORLD_REPOS=/path/containing/both
 ```

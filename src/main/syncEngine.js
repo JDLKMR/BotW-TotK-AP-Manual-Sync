@@ -11,6 +11,7 @@ const fs = require('fs'); const path = require('path');
 const { APClient } = require('./apClient');
 const { buildPlan, loadItemInfo, APWORLDS } = require('./rules');
 const S = require('./saveStore');
+const T = require('./towers');
 
 const GAMES = {
   botw: { label: 'Breath of the Wild', saveFile: 'game_data.sav' },
@@ -31,7 +32,8 @@ class GameSync extends EventEmitter {
   get file() { return S.resolveSavePath(this.cfg.saveDir, this.def.saveFile); }
   log(level, msg) { this.emit('log', { game: this.key, level, msg, t: Date.now() }); }
   pruneActive() { return this.settings.data.removeUnreceivedArmor !== false && !!this.L.seedKey; }
-  ctx() { return { vendorDir: this.dirs.vendorDir, armorNames: this.armorNames, pruneArmor: this.pruneActive(), ballad: this.key === 'botw' ? (this.cfg.ballad || {}) : undefined }; }
+  towerCfg() { return Object.assign({ unlockWarps: true, teleportTo: '' }, this.cfg.towers || {}); }
+  ctx() { return { vendorDir: this.dirs.vendorDir, armorNames: this.armorNames, pruneArmor: this.pruneActive(), ballad: this.key === 'botw' ? (this.cfg.ballad || {}) : undefined, towers: this.towerCfg(), towerCoords: T.loadCoords(this.key, this.dirs.towerDirs) }; }
 
   counts() { return countNames(this.L.receivedNames || []); }
   startCounts() { return this.L.startCounts || {}; }
@@ -44,7 +46,9 @@ class GameSync extends EventEmitter {
   }
   balladBits() { const b = (this.cfg.ballad) || {}; return ['rito', 'goron', 'zora', 'gerudo'].map(k => (b[k] === false ? 0 : 1)).join(''); }
   baseSig() { return this.key === 'botw' ? '|ballad=1111' : ''; }
-  currentSig() { return sigOf(this.nonStartCounts()) + (this.key === 'botw' ? '|ballad=' + this.balladBits() : ''); }
+  /* option part of the signature: only non-default values add a token, so existing ledgers stay "up to date" after an upgrade */
+  towerSig() { const t = this.towerCfg(); return (t.unlockWarps === false ? '|nowarp' : '') + (t.teleportTo ? '|tp=' + t.teleportTo : ''); }
+  currentSig() { return sigOf(this.nonStartCounts()) + (this.key === 'botw' ? '|ballad=' + this.balladBits() : '') + this.towerSig(); }
   nonStartCounts() { const c = this.counts(), st = this.startCounts(), o = {}; for (const k of Object.keys(c)) { const n = c[k] - (st[k] || 0); if (n > 0) o[k] = n; } return o; }
   /* something new for the player to save-and-reload for (NOT the pending lineage check: that must not keep the UI at "awaiting") */
   needsWork() { const L = this.L; return !!(L.retry || this.currentSig() !== (L.lastSig == null ? this.baseSig() : L.lastSig)); }
@@ -53,7 +57,7 @@ class GameSync extends EventEmitter {
   pendingItems() { const c = this.counts(), conf = this.effConfirmed(); let n = 0; for (const k of Object.keys(c)) n += Math.max(0, c[k] - (conf[k] || 0)); return n; }
   status() {
     return { key: this.key, label: this.def.label, enabled: !!this.cfg.enabled, ap: this.apState, apDetail: this.apDetail, save: this.saveState, file: this.file,
-      awaitingSave: this.needsWork(), items: (this.L.receivedNames || []).length, startItems: Object.values(this.startCounts()).reduce((a, b) => a + b, 0), pendingItems: this.pendingItems(), pendingProgression: this.pendingProgression(), lastApply: this.L.lastApply || null, message: this.lastMessage, busy: this.busy };
+      awaitingSave: this.needsWork(), items: (this.L.receivedNames || []).length, startItems: Object.values(this.startCounts()).reduce((a, b) => a + b, 0), pendingItems: this.pendingItems(), pendingProgression: this.pendingProgression(), lastApply: this.L.lastApply || null, message: this.lastMessage, busy: this.busy, towers: T.receivedIds(this.key, this.counts()) };
   }
   emitStatus() { this.emit('status', this.status()); }
 
@@ -182,6 +186,10 @@ class GameSync extends EventEmitter {
         if (!quiet) { this.log('info', 'Save already up to date; nothing written.'); this.lastMessage = 'Up to date.'; }
       }
       if (plan.manual.length && !quiet) this.log('info', `No automatic change for: ${[...new Set(plan.manual)].join(', ')} (manual items).`);
+      if (plan.teleport && rep.teleported) { // one-shot: written (or already there), so stop asking for it
+        this.log('info', `Teleport set: your save now points at ${plan.teleport.tower.replace(/ Skyview Tower$| Tower$/, '')}${changed ? ' - reload the save in-game to appear there (saving again first would overwrite it)' : ''}.`);
+        if (this.cfg.towers) { this.cfg.towers.teleportTo = ''; this.settings.save(); this.emit('cfg'); }
+      }
       L.retry = unapplied.length > 0;
       L.lastSig = this.currentSig(); if (!quiet || visible) L.lastApply = new Date().toISOString();
       this.ledgerStore.save();
@@ -204,7 +212,7 @@ class SyncManager extends EventEmitter {
       const cfg = s.games[key]; if (!cfg.enabled) continue;
       const info = loadItemInfo(key, this.dirs.apworldsRoot);
       const g = new GameSync({ key, settings: this.settings, ledgerStore: this.ledgerStore, host: this.host, dirs: this.dirs, armorNames: info.armorNames, progNames: info.progNames });
-      g.on('log', e => this.emit('log', e)); g.on('status', st => this.emit('status', st));
+      g.on('log', e => this.emit('log', e)); g.on('status', st => this.emit('status', st)); g.on('cfg', () => this.emit('cfg'));
       this.games[key] = g; g.start();
       if (cfg.slot && s.server) {
         const ap = new APClient({ host: s.server, port: s.port, password: s.password, slot: cfg.slot, game: APWORLDS[key].game, dataDir: this.dirs.dataDir });
@@ -216,6 +224,7 @@ class SyncManager extends EventEmitter {
   stop() { for (const g of Object.values(this.games)) { g.stop(); if (g.ap) g.ap.stop(); } this.games = {}; }
   setPaused(p) { this.paused = p; this.start(); }
   statuses() { return Object.values(this.games).map(g => g.status()); }
+  refresh() { Object.values(this.games).forEach(g => g.emitStatus()); } // after settings changed without a reconnect
   async applyNow(key) { if (this.games[key]) await this.games[key].applyNow(); }
 }
 module.exports = { SyncManager, GameSync, GAMES, countNames };

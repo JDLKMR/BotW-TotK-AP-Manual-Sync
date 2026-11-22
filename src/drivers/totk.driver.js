@@ -178,6 +178,13 @@
       if (dups.length > 1) { dups[0].quantity = dups.reduce((n, i) => n + (i.quantity || 1), 0); g.Pouch.updateItemRow(dups[0]); dups.slice(1).forEach(d => removeFromPouch(pouch, d)); }
     });
 
+    /* "Teleport to Tower": the editor's Position boxes are saved by SavegameEditor.save() below */
+    if (plan.teleport) {
+      const t = plan.teleport;
+      g.setValue('pos-x', t.x); g.setValue('pos-y', t.y); g.setValue('pos-z', t.z);
+      report.teleported = true; note('teleport to ' + t.tower + ' (' + t.x + ', ' + t.y + ', ' + t.z + ')');
+    }
+
     /* armor not received in the multiworld is removed silently (not reported in report.changes) */
     if (plan.pruneArmor) {
       const keep = new Set((plan.keepArmor || []).map(n => H.stripVersion(n))); let removed = 0;

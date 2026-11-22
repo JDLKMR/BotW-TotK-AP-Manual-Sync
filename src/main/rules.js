@@ -86,15 +86,19 @@ function buildPlan(game, counts, confirmed, ctx) {
   const delta = (n) => Math.max(0, c(n) - (confirmed[n] || 0));
   const plan = { flags: [], stats: {}, slots: {}, adds: [], checks: [], manual: [], rupeeItems: {}, armorLevel: c('Progressive Armor Upgrade') };
   const vd = ctx.vendorDir;
+  const tw = Object.assign({ unlockWarps: true, teleportTo: '' }, ctx.towers || {}); tw.unlockWarps = tw.unlockWarps !== false; // "Unlock Tower Warps" (default on)
 
   if (game === 'botw') {
     const flag = (name, value, mode, extra) => { const h = botwHash(name, vd); plan.flags.push(Object.assign({ name, hash: h.hash, value, mode: mode || 'set' }, extra || {})); return h; };
-    for (const [n, num] of Object.entries(BOTW_TOWERS)) if (c(n) > 0) {
+    for (const [n, num] of Object.entries(BOTW_TOWERS)) if (c(n) > 0 && tw.unlockWarps) {
       flag('MapTower_' + num, 1); flag('Location_MapTower' + num, 1, 'atLeast');
       plan.checks.push({ t: 'flag', name: 'MapTower_' + num, hash: botwHash('MapTower_' + num, vd).hash });
     }
     for (const [n, flags] of Object.entries(BOTW_RUNES)) if (c(n) > 0) flags.forEach(f => { flag(f, 1); plan.checks.push({ t: 'flag', name: f, hash: botwHash(f, vd).hash }); });
     for (const [n, flags] of Object.entries(BOTW_PROGRESSIVE_RUNES)) flags.forEach((f, i) => { if (c(n) > i) { flag(f, 1); plan.checks.push({ t: 'flag', name: f, hash: botwHash(f, vd).hash }); } });
+    /* The game hands out the Sheikah Sensor by itself when a tower is activated. Not received yet in the multiworld -> take it back (silently).
+       1 received: the base sensor stays as the loop above leaves it. 2 received: the loop above rewrites BOTH flags on every pass, so Sensor+ survives the game re-giving the base one. */
+    if (ctx.pruneArmor && c('Progressive Sheikah Sensor') === 0) BOTW_PROGRESSIVE_RUNES['Progressive Sheikah Sensor'].forEach(f => flag(f, 0, 'set', { silent: true }));
     for (const [champ, region] of Object.entries(BOTW_CHAMPIONS)) {
       const level = Math.min(2, Math.max(c(champ) > 0 ? 1 : 0, c('Progressive ' + champ)));
       [['IsGet_Obj_HeroSoul_' + region, champ], ['IsGet_Obj_DLC_HeroSoul_' + region, champ + ' +']].forEach(([flagName, itemName], i) => {
@@ -139,7 +143,7 @@ function buildPlan(game, counts, confirmed, ctx) {
     }
   } else {
     const flag = (name, value, also) => plan.flags.push({ name, value, also: also || [] });
-    for (const [n, num] of Object.entries(TOTK_TOWERS)) if (c(n) > 0) {
+    for (const [n, num] of Object.entries(TOTK_TOWERS)) if (c(n) > 0 && tw.unlockWarps) {
       ['IsVisitLocation.Tower' + num, 'IsOpenCannon.Tower' + num, 'IsActivateCannon.Tower' + num].forEach(f => { flag(f, true); });
       plan.checks.push({ t: 'flag', name: 'IsActivateCannon.Tower' + num });
     }
@@ -176,6 +180,13 @@ function buildPlan(game, counts, confirmed, ctx) {
     plan.keepArmor = Object.keys(counts).filter(n => counts[n] > 0 && ctx.armorNames.has(n)).map(n => alias[n] || n);
   }
 
+  /* "Teleport to Tower": a one-shot request (cleared by the app once written), only for towers already received and with known coordinates */
+  if (tw.teleportTo) {
+    const ent = Object.entries(game === 'botw' ? BOTW_TOWERS : TOTK_TOWERS).find(([, num]) => num === tw.teleportTo);
+    const pos = ent && c(ent[0]) > 0 && ctx.towerCoords && ctx.towerCoords[tw.teleportTo];
+    if (pos) plan.teleport = { id: tw.teleportTo, tower: ent[0], x: pos.x, y: pos.y, z: pos.z };
+  }
+
   const manualSet = game === 'botw' ? BOTW_MANUAL : TOTK_MANUAL;
   for (const n of Object.keys(counts)) if (manualSet.has(n)) plan.manual.push(n);
   return plan;
@@ -190,4 +201,4 @@ function loadItemInfo(game, apworldsRoot) {
   return { armorNames, progNames, allNames: d.map(i => i.name) };
 }
 
-module.exports = { buildPlan, loadItemInfo, APWORLDS, BOTW_MANUAL, TOTK_MANUAL, DEFAULT_DURABILITY };
+module.exports = { buildPlan, loadItemInfo, APWORLDS, BOTW_MANUAL, TOTK_MANUAL, DEFAULT_DURABILITY, BOTW_TOWERS, TOTK_TOWERS };
