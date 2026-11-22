@@ -7,7 +7,7 @@ const TIP = 'The game stores its saves in several numbered folders, one for each
 const BALLAD = [['rito', 'Rito', 'Vah Medoh'], ['goron', 'Goron', 'Vah Rudania'], ['zora', 'Zora', 'Vah Ruta'], ['gerudo', 'Gerudo', 'Vah Naboris']];
 const BALLAD_TIP = 'These flags are enabled by default to allow access to DLC shrines. However, they must be temporarily disabled before entering their respective Divine Beast so it loads in its proper state.';
 function balladBlock() {
-  return `<div class="ballad"><div class="ballad-head"><span class="lbl">Champions' Ballad/Divine Beast flags<span class="tip" title="${BALLAD_TIP}">i</span></span>
+  return `<div class="ballad"><div class="ballad-head"><span class="lbl">Champions' Ballad/Divine Beast Flags<span class="tip" title="${BALLAD_TIP}">i</span></span>
       <label class="chk"><input type="checkbox" id="botw-ballad-all"> All</label></div>
     <div class="ballad-grid">${BALLAD.map(b => `<label class="chk" title="BalladOfHero${b[1]}_Activated"><input type="checkbox" id="botw-ballad-${b[0]}"> ${b[1]} <span class="muted">(${b[2]})</span></label>`).join('')}</div></div>`;
 }
@@ -54,8 +54,8 @@ function gameCard(g) {
   d.innerHTML = `
     <div class="gamehead"><h2><img class="gameicon" src="${g.icon}" alt="">${g.title}</h2><label class="chk"><input type="checkbox" id="${g.key}-enabled"> Enabled</label></div>
     <div class="grid2">
-      <label><span>Slot name <span class="muted">(game: ${g.apGame})</span></span><input id="${g.key}-slot" placeholder="Your slot name in the room"></label>
-      <label><span>Save folder<span class="tip" title="${TIP.replace(/"/g, '&quot;')}">i</span></span>
+      <label><span>Slot Name <span class="muted">(Game: ${g.apGame})</span></span><input id="${g.key}-slot" placeholder="Your slot name in the room"></label>
+      <label><span>Save Folder<span class="tip" title="${TIP.replace(/"/g, '&quot;')}">i</span></span>
         <div class="pathrow"><input id="${g.key}-dir" placeholder="…/${g.file === 'game_data.sav' ? '0/1' : '1'}  (folder containing ${g.file})"><button id="${g.key}-browse" type="button">Browse…</button></div></label>
     </div>
 ${g.key === 'botw' ? towerBlock('botw') + balladBlock() : towerBlock('totk')}

@@ -29,7 +29,7 @@ h1{display:flex;align-items:center;gap:10px}.apicon{width:32px;height:32px;objec
 header{align-items:center}
 .status{margin-bottom:16px}
 
-.tower-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 28px}.tower-row .chk{margin:0;padding-bottom:6px}
-.tower-sel{min-width:220px}.tower-sel>span{display:flex;align-items:center}
+.tower-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 28px}.tower-row .chk{margin:0}
+.tower-sel{flex-direction:row;align-items:center;gap:8px}.tower-sel>span{display:flex;align-items:center}.tower-sel select{min-width:200px}
 select{background:#12141a;border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:7px 9px;font:inherit}select:focus{outline:1px solid var(--acc)}option:disabled{color:#5a616c}
 .towers{margin-top:12px}
