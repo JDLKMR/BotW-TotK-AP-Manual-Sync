@@ -51,4 +51,20 @@ assert.deepStrictEqual(bc['07'], { x: -588.1401977539062, y: 175.85565185546875,
 assert.deepStrictEqual(tc['01'], { x: -244.06314086914062, y: 98.05045318603516, z: 22.00397491455078 });
 assert.deepStrictEqual(tc['02'], { x: -1910.641845703125, y: 1192.6187744140625, z: 274.6148986816406 });
 assert.ok(T.describe(dirs).botw.every(d => d.hasCoords) && T.describe(dirs).totk.every(d => d.hasCoords));
+
+/* Fresh seed: starting with "Unlock Tower Warps" off must not show "pending changes" (nothing in the save would change) */
+{
+  const { GameSync } = require('../src/main/syncEngine');
+  const mk = (key, towers, L, ballad) => new GameSync({ key, settings: { data: { removeUnreceivedArmor: true, games: { [key]: { towers, ballad: ballad || {} } } } }, ledgerStore: { data: { [key]: Object.assign({ seedKey: 'seed', receivedNames: [], confirmed: {}, lastSig: null, retry: false }, L) } }, host: null, dirs: {} });
+  for (const key of ['botw', 'totk']) {
+    assert.strictEqual(mk(key, { unlockWarps: false, teleportTo: '' }).needsWork(), false); // fresh seed, warps off from the start
+    assert.strictEqual(mk(key, { unlockWarps: true, teleportTo: '' }).needsWork(), false); // fresh seed, defaults
+    assert.strictEqual(mk(key, { unlockWarps: false, teleportTo: 'Hateno Tower' }).needsWork(), true); // a requested teleport is still real work
+    const g = mk(key, { unlockWarps: false, teleportTo: '' });
+    g.ledgerStore.data[key].lastSig = g.currentSig(); // a pass has run with warps off ...
+    assert.strictEqual(g.needsWork(), false);
+    g.cfg.towers.unlockWarps = true; assert.strictEqual(g.needsWork(), true); // ... turning warps on afterwards is real work (tower flags)
+  }
+  assert.strictEqual(mk('botw', { unlockWarps: false }, {}, { rito: false }).needsWork(), true); // Ballad toggles that differ from the template still count
+}
 console.log('test-towers OK');

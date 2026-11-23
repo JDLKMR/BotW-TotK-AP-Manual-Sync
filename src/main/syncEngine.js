@@ -45,9 +45,11 @@ class GameSync extends EventEmitter {
     return c;
   }
   balladBits() { const b = (this.cfg.ballad) || {}; return ['rito', 'goron', 'zora', 'gerudo'].map(k => (b[k] === false ? 0 : 1)).join(''); }
-  baseSig() { return this.key === 'botw' ? '|ballad=1111' : ''; }
+  /* signature of a save with nothing written yet. Starting with "Unlock Tower Warps" off is part of it: with no tower items there is nothing in the save to change, so a fresh seed is "up to date" */
+  baseSig() { return (this.key === 'botw' ? '|ballad=1111' : '') + this.warpSig(); }
+  warpSig() { return this.towerCfg().unlockWarps === false ? '|nowarp' : ''; }
   /* option part of the signature: only non-default values add a token, so existing ledgers stay "up to date" after an upgrade */
-  towerSig() { const t = this.towerCfg(); return (t.unlockWarps === false ? '|nowarp' : '') + (t.teleportTo ? '|tp=' + t.teleportTo : ''); }
+  towerSig() { const t = this.towerCfg(); return this.warpSig() + (t.teleportTo ? '|tp=' + t.teleportTo : ''); }
   currentSig() { return sigOf(this.nonStartCounts()) + (this.key === 'botw' ? '|ballad=' + this.balladBits() : '') + this.towerSig(); }
   nonStartCounts() { const c = this.counts(), st = this.startCounts(), o = {}; for (const k of Object.keys(c)) { const n = c[k] - (st[k] || 0); if (n > 0) o[k] = n; } return o; }
   /* something new for the player to save-and-reload for (NOT the pending lineage check: that must not keep the UI at "awaiting") */
