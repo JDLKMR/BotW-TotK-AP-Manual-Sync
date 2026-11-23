@@ -7,6 +7,13 @@ const updater = require('./updater');
 const cli = require('./cli');
 const towers = require('./towers');
 
+/* Steam Deck Game Mode (Gamescope): with the default GTK input method the on-screen keyboard types every character twice.
+   The "simple" input method avoids that. Only applied in Game Mode, so ibus/fcitx users on a normal desktop are unaffected. */
+if (process.platform === 'linux') {
+  const e = process.env, gameMode = /^gamescope$/i.test(e.XDG_CURRENT_DESKTOP || '') || (e.SteamGamepadUI === '1' && e.SteamDeck === '1');
+  if (gameMode && e.GTK_IM_MODULE !== 'simple') e.GTK_IM_MODULE = 'simple';
+}
+
 const ROOT = path.join(__dirname, '..', '..');
 if (!app.requestSingleInstanceLock()) { app.quit(); return; }
 
