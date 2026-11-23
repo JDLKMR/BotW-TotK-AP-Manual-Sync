@@ -20,7 +20,7 @@ const attr = (t) => String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 function towerBlock(k) {
   return `<div class="ballad towers"><div class="ballad-head"><span class="lbl">${TOWER_UI[k].title}</span></div>
     <div class="tower-row"><label class="chk"><input type="checkbox" id="${k}-warps"> Unlock Tower Warps<span class="tip" title="${attr(warpTip(k))}">i</span></label>
-      <label class="tower-sel"><span>Teleport to Tower<span class="tip" title="${attr(TOWER_UI[k].tp)}">i</span></span><select id="${k}-tp"></select></label></div></div>`;
+      <div class="tower-sel"><span>Teleport to Tower<span class="tip" title="${attr(TOWER_UI[k].tp)}">i</span></span><select id="${k}-tp"></select></div></div></div>`;
 }
 let towerDefs = { botw: [], totk: [] }, towerRecv = { botw: [], totk: [] }, towerSig = {};
 /* "Teleport to Tower": every tower by name, only the ones received so far (and with known coordinates) can be picked; the rest are greyed out */
@@ -31,6 +31,60 @@ function renderTowerSelect(k) {
   const keep = sel.value;
   sel.innerHTML = '<option value="">None</option>' + towerDefs[k].map(d => `<option value="${d.id}"${have.has(d.id) && d.hasCoords ? '' : ' disabled'}>${esc(d.label)}</option>`).join('');
   sel.value = keep && !(sel.querySelector(`option[value="${keep}"]`) || {}).disabled ? keep : '';
+}
+/* Native <select> popups are separate OS-level windows, which Steam Deck Game Mode (Gamescope) often fails to show after the first use.
+   This hides the native <select> and shows an in-page dropdown instead. The hidden <select> stays the single source of truth,
+   so .value, .onchange and renderTowerSelect() keep working unchanged. */
+function enhanceSelect(sel) {
+  const wrap = document.createElement('div'); wrap.className = 'dd';
+  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'dd-btn'; btn.setAttribute('aria-haspopup', 'listbox'); btn.setAttribute('aria-expanded', 'false');
+  const txt = document.createElement('span'); btn.appendChild(txt);
+  const list = document.createElement('div'); list.className = 'dd-list'; list.setAttribute('role', 'listbox'); list.hidden = true;
+  wrap.append(btn, list); sel.classList.add('dd-native'); sel.parentNode.insertBefore(wrap, sel);
+  let act = -1;
+  const opts = () => Array.from(list.children);
+  const enabled = () => opts().filter(o => !o.classList.contains('off'));
+  const setAct = (o) => { opts().forEach(x => x.classList.toggle('act', x === o)); if (o) o.scrollIntoView({ block: 'nearest' }); };
+  function render() {
+    const cur = sel.selectedOptions[0];
+    txt.textContent = cur ? cur.textContent : '';
+    list.innerHTML = '';
+    Array.from(sel.options).forEach(o => {
+      const d = document.createElement('div'); d.className = 'dd-opt' + (o.disabled ? ' off' : '') + (o.selected ? ' sel' : ''); d.dataset.v = o.value; d.textContent = o.textContent;
+      d.setAttribute('role', 'option'); if (o.disabled) d.setAttribute('aria-disabled', 'true');
+      list.appendChild(d);
+    });
+  }
+  function open() {
+    render(); list.hidden = false; btn.setAttribute('aria-expanded', 'true');
+    const r = wrap.getBoundingClientRect(); list.classList.toggle('up', window.innerHeight - r.bottom < 260 && r.top > window.innerHeight - r.bottom);
+    setAct(opts().find(o => o.classList.contains('sel')) || null);
+  }
+  function close() { list.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
+  function pick(o) {
+    if (!o || o.classList.contains('off')) return;
+    if (sel.value !== o.dataset.v) { sel.value = o.dataset.v; sel.dispatchEvent(new Event('change', { bubbles: true })); }
+    close();
+  }
+  btn.addEventListener('click', () => { list.hidden ? open() : close(); });
+  list.addEventListener('click', (e) => { const o = e.target.closest('.dd-opt'); if (o) pick(o); });
+  list.addEventListener('mouseover', (e) => { const o = e.target.closest('.dd-opt'); if (o && !o.classList.contains('off')) setAct(o); });
+  document.addEventListener('pointerdown', (e) => { if (!list.hidden && !wrap.contains(e.target)) close(); });
+  btn.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !list.hidden) { e.preventDefault(); close(); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End') {
+      e.preventDefault(); if (list.hidden) { open(); return; }
+      const en = enabled(); if (!en.length) return; act = en.findIndex(o => o.classList.contains('act'));
+      act = e.key === 'Home' ? 0 : e.key === 'End' ? en.length - 1 : e.key === 'ArrowDown' ? Math.min(act + 1, en.length - 1) : Math.max(act - 1, 0);
+      setAct(en[act]); return;
+    }
+    if ((e.key === 'Enter' || e.key === ' ') && !list.hidden) { const a = list.querySelector('.act'); if (a) { e.preventDefault(); pick(a); } }
+  });
+  wrap.addEventListener('focusout', (e) => { if (e.relatedTarget && !wrap.contains(e.relatedTarget)) close(); }); // Tab away (clicks inside the list have no relatedTarget and must not close it)
+  const d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+  Object.defineProperty(sel, 'value', { configurable: true, get() { return d.get.call(this); }, set(v) { d.set.call(this, v); render(); } });
+  new MutationObserver(render).observe(sel, { childList: true });
+  render();
 }
 function fillGameOpts(games) {
   BALLAD.forEach(b => { $('botw-ballad-' + b[0]).checked = !(games.botw.ballad && games.botw.ballad[b[0]] === false); }); syncBalladAll();
@@ -97,6 +151,7 @@ function addLog(e) {
 }
 (async function init() {
   GAMES.forEach(g => $('games').appendChild(gameCard(g)));
+  GAMES.forEach(g => enhanceSelect($(g.key + '-tp')));
   settings = await window.api.getSettings(); towerDefs = await window.api.getTowers(); fill();
   GAMES.forEach(g => {
     $(g.key + '-browse').onclick = async () => { const p = await window.api.pickDir(); if (p) $(g.key + '-dir').value = p; };

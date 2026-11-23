@@ -30,6 +30,14 @@ header{align-items:center}
 .status{margin-bottom:16px}
 
 .tower-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 28px}.tower-row .chk{margin:0}
-.tower-sel{flex-direction:row;align-items:center;gap:8px}.tower-sel>span{display:flex;align-items:center}.tower-sel select{min-width:200px}
+.tower-sel{display:flex;flex-direction:row;align-items:center;gap:8px;color:var(--mut);font-size:12px}.tower-sel>span{display:flex;align-items:center}
+.dd-native{display:none}
+/* in-page dropdown (native select popups don't show reliably in Steam Deck Game Mode) */
+.dd{position:relative}
+.dd-btn{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:200px;text-align:left;background:#12141a;padding:7px 9px}.dd-btn:hover{background:#171a21}.dd-btn:focus-visible{outline:1px solid var(--acc)}
+.dd-btn::after{content:"\25BE";color:var(--mut)}
+.dd-list{position:absolute;left:0;top:100%;margin-top:4px;min-width:100%;width:max-content;max-width:340px;max-height:240px;overflow:auto;z-index:30;background:#12141a;border:1px solid var(--line);border-radius:6px;padding:4px 0;box-shadow:0 8px 22px rgba(0,0,0,.5)}
+.dd-list[hidden]{display:none}.dd-list.up{top:auto;bottom:100%;margin:0 0 4px}
+.dd-opt{padding:7px 12px;cursor:pointer;color:var(--txt);font-size:13px;white-space:nowrap}.dd-opt.act{background:#2a2f38}.dd-opt.sel{color:var(--acc)}.dd-opt.off{color:#5a616c;cursor:default}
 select{background:#12141a;border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:7px 9px;font:inherit}select:focus{outline:1px solid var(--acc)}option:disabled{color:#5a616c}
 .towers{margin-top:12px}
