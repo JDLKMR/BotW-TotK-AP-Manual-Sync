@@ -6,12 +6,16 @@ const ctx = (o) => Object.assign({ vendorDir, armorNames: new Set(), pruneArmor:
 const flagsOf = (p) => Object.fromEntries(p.flags.map(f => [f.name, f]));
 const SENS = ['IsGet_Obj_SheikSensor', 'IsGet_Obj_SheikSensorLv2'];
 
-/* Sheikah Sensor: 0 received -> both flags written to 0 silently; 1 -> base stays, nothing removed; 2 -> both kept on */
+/* Sheikah Sensor: the IsGet flags are never taken back (the game gives the Sensor once, no repeated cutscene).
+   0 received -> the in-game Sensor is switched off silently; first receipt -> switched on once; afterwards the player's own on/off choice is left alone */
+const SW = 'App_SeakSensor_IsEnabled', P = 'Progressive Sheikah Sensor';
 let f = flagsOf(buildPlan('botw', {}, {}, ctx()));
-SENS.forEach(n => { assert.strictEqual(f[n].value, 0); assert.strictEqual(f[n].silent, true); });
-f = flagsOf(buildPlan('botw', { 'Progressive Sheikah Sensor': 1 }, {}, ctx())); assert.strictEqual(f[SENS[0]].value, 1); assert.ok(!f[SENS[0]].silent); assert.ok(!f[SENS[1]]);
-f = flagsOf(buildPlan('botw', { 'Progressive Sheikah Sensor': 2 }, {}, ctx())); SENS.forEach(n => assert.strictEqual(f[n].value, 1));
-f = flagsOf(buildPlan('botw', {}, {}, ctx({ pruneArmor: false }))); assert.ok(!f[SENS[0]] && !f[SENS[1]]); // pruning off (or not connected yet): never touched
+assert.strictEqual(f[SW].value, 0); assert.strictEqual(f[SW].silent, true); SENS.forEach(n => assert.ok(!f[n]));
+f = flagsOf(buildPlan('botw', { [P]: 1 }, {}, ctx())); assert.strictEqual(f[SW].value, 1); assert.ok(!f[SW].silent); assert.strictEqual(f[SENS[0]].value, 1); assert.ok(!f[SENS[1]]);
+f = flagsOf(buildPlan('botw', { [P]: 1 }, { [P]: 1 }, ctx())); assert.ok(!f[SW]); assert.strictEqual(f[SENS[0]].value, 1); // already confirmed: the player's own choice stays
+f = flagsOf(buildPlan('botw', { [P]: 2 }, { [P]: 1 }, ctx())); assert.ok(!f[SW]); SENS.forEach(n => assert.strictEqual(f[n].value, 1)); // Sensor+ later: not switched on again
+f = flagsOf(buildPlan('botw', { [P]: 2 }, {}, ctx())); assert.strictEqual(f[SW].value, 1); SENS.forEach(n => assert.strictEqual(f[n].value, 1)); // both at once
+f = flagsOf(buildPlan('botw', {}, {}, ctx({ pruneArmor: false }))); assert.ok(!f[SW] && !f[SENS[0]] && !f[SENS[1]]); // pruning off (or not connected yet): never touched
 f = flagsOf(buildPlan('totk', {}, {}, ctx())); assert.ok(!Object.keys(f).some(n => /Sensor/.test(n))); // TotK unaffected
 assert.ok(!buildPlan('totk', { 'Progressive Sensor': 1 }, {}, ctx()).flags.some(x => x.value === false && /Sensor/.test(x.name)));
 

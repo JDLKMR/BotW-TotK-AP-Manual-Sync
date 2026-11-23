@@ -96,9 +96,12 @@ function buildPlan(game, counts, confirmed, ctx) {
     }
     for (const [n, flags] of Object.entries(BOTW_RUNES)) if (c(n) > 0) flags.forEach(f => { flag(f, 1); plan.checks.push({ t: 'flag', name: f, hash: botwHash(f, vd).hash }); });
     for (const [n, flags] of Object.entries(BOTW_PROGRESSIVE_RUNES)) flags.forEach((f, i) => { if (c(n) > i) { flag(f, 1); plan.checks.push({ t: 'flag', name: f, hash: botwHash(f, vd).hash }); } });
-    /* The game hands out the Sheikah Sensor by itself when a tower is activated. Not received yet in the multiworld -> take it back (silently).
-       1 received: the base sensor stays as the loop above leaves it. 2 received: the loop above rewrites BOTH flags on every pass, so Sensor+ survives the game re-giving the base one. */
-    if (ctx.pruneArmor && c('Progressive Sheikah Sensor') === 0) BOTW_PROGRESSIVE_RUNES['Progressive Sheikah Sensor'].forEach(f => flag(f, 0, 'set', { silent: true }));
+    /* The game hands out the Sheikah Sensor by itself when a tower is activated, and plays the cutscene again at every tower while its IsGet flag is off.
+       So the IsGet flags are never taken back. Instead the Sensor is switched off in the in-game map (App_SeakSensor_IsEnabled) until it is received in the multiworld.
+       First receipt: switched on once; after that the player's own on/off choice is left alone (and Sensor+ never re-enables it). */
+    const SENSOR = 'Progressive Sheikah Sensor';
+    if (ctx.pruneArmor && c(SENSOR) === 0) flag('App_SeakSensor_IsEnabled', 0, 'set', { silent: true });
+    else if (c(SENSOR) > 0 && !(confirmed[SENSOR] >= 1)) flag('App_SeakSensor_IsEnabled', 1);
     for (const [champ, region] of Object.entries(BOTW_CHAMPIONS)) {
       const level = Math.min(2, Math.max(c(champ) > 0 ? 1 : 0, c('Progressive ' + champ)));
       [['IsGet_Obj_HeroSoul_' + region, champ], ['IsGet_Obj_DLC_HeroSoul_' + region, champ + ' +']].forEach(([flagName, itemName], i) => {
